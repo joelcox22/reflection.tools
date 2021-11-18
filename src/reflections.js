@@ -62,7 +62,7 @@ const colors = uniqueSenders.reduce((acc, sender, index) => {
 
 export function Reflections() {
   const [address, setAddress] = useState(() => {
-    return window.location.hash.replace('#', '') ?? localStorage.getItem("walletAddress") ?? "";
+    return window.location.hash.replace('#', '') || localStorage.getItem("walletAddress") || '';
   });
   const [debouncedAddress, setDobouncedAddress] = useState(address);
   const [result, setResult] = useState(address);
@@ -71,7 +71,7 @@ export function Reflections() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDobouncedAddress(address);
+      setDobouncedAddress(address.trim());
     }, 500);
     localStorage.setItem("walletAddress", address);
     return () => {
@@ -83,12 +83,21 @@ export function Reflections() {
 
     window.location.hash = debouncedAddress;
 
-    if (!debouncedAddress.match(/^0x[A-Za-z0-9]{40}$/)) {
+    if (debouncedAddress === '') {
+      window.gtag('event', 'empty-wallet-address');
+      setLoading(false);
+      setErrors(false);
+      setResult(null);
+      return;
+    } else if (!debouncedAddress.match(/^0x[A-Za-z0-9]{40}$/)) {
       setErrors("Invalid wallet address.");
       setLoading(false);
       setResult(null);
+      window.gtag('event', 'invalid-wallet-address');
       return;
     }
+
+    window.gtag('event', 'lookup-wallet-address');
 
     setLoading(true);
     setErrors(false);
@@ -181,8 +190,18 @@ export function Reflections() {
         value={address}
         onChange={(e) => setAddress(e.target.value)}
       />
-      <div style={{ maxWidth: 600, margin: 'auto' }}>
-        {debouncedAddress === "" ? null : errors ? (
+      <div style={{ maxWidth: 600, margin: 'auto', padding: 20 }}>
+        {debouncedAddress === "" ? (
+          <>
+            <p>This tool will fetch data about reflective tokens ({uniqueSenders.join(', ')}), and display how much you're eaching from and in each token in a single place.</p>
+            <p>When you enter in your address, your browser makes a graphql query directly to https://graphql.bitquery.io/ to fetch all of your transactions, which are then processed into very pretty graphs for your viewing pleasure. Data may or may not be up-to-date - that entirely depends on bitquery.</p>
+            <p>There's a good chance this tool might break sometime. It's just been hacked together in a few hours so far, and is not using any API key for Bitquery, so they could block this if we end up sending too many requests.</p>
+            <p>Feel free to log any issues <a href="https://github.com/joelcox22/reflection.tools/issues" target="_blank" rel="noreferrer">in Github Issues</a>. <a href="https://github.com/joelcox22/reflection.tools" target="_blank" rel="noreferrer">Full source code is available there too</a>.</p>
+            <p>Google analytics is setup purely so I can see how many people use this and if it's worth continuing development. Cookies are disabled - it's only interaction events with the page being logged.</p>
+            <p>Pull requests are welcome if anyone wants to help out or add more tokens.</p>
+            <p>I'd love to find a way to also fetch and display pending rewards from all of these tokens - if anyone knows how, please let me know via a Github Issue or something.</p>
+          </>
+        ) : errors ? (
           <pre>{JSON.stringify(errors, null, 4)}</pre>
         ) : loading ? (
           <p>Loading...</p>
