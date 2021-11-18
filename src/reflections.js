@@ -74,6 +74,13 @@ export function Reflections() {
       setDobouncedAddress(address.trim());
     }, 500);
     localStorage.setItem("walletAddress", address);
+    window.addEventListener('hashchange', () => {
+      const updatedAddress = window.location.hash.replace('#', '');
+      if (updatedAddress !== address) {
+        setAddress(updatedAddress);
+        setDobouncedAddress(updatedAddress);
+      }
+    });
     return () => {
       clearTimeout(timer);
     };
@@ -211,7 +218,7 @@ export function Reflections() {
           <p>Loading...</p>
         ) : (
           result && Object.entries(result).map(([currency, chart]) => (
-            <Fragment key={currency+debouncedAddress}>
+            <Fragment key={currency}>
               <h1>{currency}</h1>
               <Bar
                 data={chart}
