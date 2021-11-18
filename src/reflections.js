@@ -117,6 +117,7 @@ export function Reflections() {
       .then((res) => {
         setLoading(false);
         if (res.errors) {
+          window.gtag('event', 'data-lookup-error');
           setErrors(res.errors);
           setResult(null);
           return;
