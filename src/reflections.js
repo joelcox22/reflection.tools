@@ -48,7 +48,7 @@ const sendersWeCareAbout = {
   "0xdedf5fa8ec49255bc2c7bfadcd18be2c0d228f99": "Reflecto",
   "0x7bda2f125b0e63bb332e1e6342be381e28efaeb6": "Reflecto",
   "0xd93a7af8d6292030947b13dd2942a8d2baca649b": "Santa Coin",
-  "0x62c73478676848b96b729a3f2e25412735154df0": "Corsac"
+  "0x62c73478676848b96b729a3f2e25412735154df0": "Corsac",
 };
 
 const uniqueSenders = Object.values(sendersWeCareAbout).filter(
@@ -123,6 +123,7 @@ export function Reflections() {
           return;
         }
 
+        const totals = {};
         const incomeCurrencies = [];
 
         const sentTotals = res.data.ethereum.transfers.reduce(
@@ -137,6 +138,8 @@ export function Reflections() {
             acc[date][currency][sender] += transfer.amount;
             if (!incomeCurrencies.includes(currency))
               incomeCurrencies.push(currency);
+            totals[currency] = totals[currency] || {};
+            totals[currency][sender] = (totals[currency][sender] || 0) + transfer.amount;
             return acc;
           },
           {}
@@ -154,7 +157,7 @@ export function Reflections() {
           });
           uniqueSenders.forEach((sender) => {
             chart.datasets[sender] = {
-              label: sender,
+              label: `${sender} (${Math.round(totals[currency][sender]).toLocaleString()})`,
               backgroundColor: colors[sender],
               data: []
             };
