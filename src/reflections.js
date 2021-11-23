@@ -49,6 +49,8 @@ const sendersWeCareAbout = {
   "0x7bda2f125b0e63bb332e1e6342be381e28efaeb6": "Reflecto",
   "0xd93a7af8d6292030947b13dd2942a8d2baca649b": "Santa Coin",
   "0x62c73478676848b96b729a3f2e25412735154df0": "Corsac",
+  "0x35074b2ab33048c84f37744484ee63e469dc68b8": "Techno Floki",
+  "0xf8b814824efd4a2d238fcaa46f608bfd18236e8c": "ForeverGrow",
 };
 
 const uniqueSenders = Object.values(sendersWeCareAbout).filter(
