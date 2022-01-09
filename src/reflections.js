@@ -87,6 +87,7 @@ export function Reflections() {
         setLoading(false);
         if (res.message === 'NOTOK') {
           setErrors(res.result);
+          window.gtag('event', 'rate-limited');
           return;
         }
 
@@ -186,6 +187,7 @@ export function Reflections() {
             {typeof errors === 'string' && errors.includes('rate limit') && (
               <button onClick={() => {
                 setRetry(retry + 1);
+                window.gtag('event', 'refresh-because-rate-limited');
               }}>Click here to try again</button>
             )}
           </>
