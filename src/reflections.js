@@ -1,56 +1,20 @@
 import { useState, useEffect, Fragment } from "react";
 import { Bar } from "react-chartjs-2";
 
-const query = `
-  query ($address: String!) {
-    ethereum(network: bsc) {
-      transfers(receiver: {is: $address}) {
-        amount
-        currency {
-          name
-          symbol
-          tokenId
-          tokenType
-          decimals
-          address
-        }
-        date {
-          date
-        }
-        transaction {
-          hash
-          txFrom {
-            address
-          }
-        }
-        sender {
-          address
-          annotation
-          smartContract {
-            currency {
-              name
-            }
-            contractType
-          }
-        }
-        receiver {
-          address
-        }
-      }
-    }
-  }
-`;
-
 const sendersWeCareAbout = {
-  "0xfbab1d829e36efbd13642229eae2964004f38c41": "Evergrow",
-  "0x9aacfd4ff2a965779cff25e370b89b788222e6b9": "Crypter",
-  "0xfdac78ff52dead5a5f0b89b32a8ea66a01979f31": "Reflecto",
-  "0xdedf5fa8ec49255bc2c7bfadcd18be2c0d228f99": "Reflecto",
-  "0x7bda2f125b0e63bb332e1e6342be381e28efaeb6": "Reflecto",
-  "0xd93a7af8d6292030947b13dd2942a8d2baca649b": "Santa Coin",
-  "0x62c73478676848b96b729a3f2e25412735154df0": "Corsac",
-  "0x35074b2ab33048c84f37744484ee63e469dc68b8": "Techno Floki",
-  "0xf8b814824efd4a2d238fcaa46f608bfd18236e8c": "ForeverGrow",
+  "0xfbab1d829e36efbd13642229eae2964004f38c41": "Evergrow", // BUSD
+  "0x9aacfd4ff2a965779cff25e370b89b788222e6b9": "Crypter", // BUSD
+  "0xfdac78ff52dead5a5f0b89b32a8ea66a01979f31": "Reflecto", // BUSD
+  "0xdedf5fa8ec49255bc2c7bfadcd18be2c0d228f99": "Reflecto", // EGC
+  "0x7bda2f125b0e63bb332e1e6342be381e28efaeb6": "Reflecto", // CRYPT
+  "0x65ab1b70c70011e4ea5a7268df159480c47e7f98": "Reflecto", // SHIB
+  "0xd93a7af8d6292030947b13dd2942a8d2baca649b": "Santa Coin", // BUSD
+  "0x62c73478676848b96b729a3f2e25412735154df0": "Corsac", // BUSD
+  "0x35074b2ab33048c84f37744484ee63e469dc68b8": "Techno Floki", // DOGE
+  "0xf8b814824efd4a2d238fcaa46f608bfd18236e8c": "ForeverGrow", // BUSD
+  "0x9e90d5e53baa6254be7db9cdb4afb4c60f9aacf7": "Y-5 Finance", // BUSD
+  "0xa383829c57a1b7ccbf7c6cf00c4dea06a8c2e814": "Rematic EGC", // EGC
+  "0x0b4a50a097848eea10e8848459ec1539645e5175": "Boda V2", // BUSD
 };
 
 const uniqueSenders = Object.values(sendersWeCareAbout).filter(
@@ -70,6 +34,7 @@ export function Reflections() {
   const [result, setResult] = useState(address);
   const [errors, setErrors] = useState();
   const [loading, setLoading] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,21 +75,21 @@ export function Reflections() {
 
     setLoading(true);
     setErrors(false);
-    fetch("https://graphql.bitquery.io/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        query,
-        variables: JSON.stringify({
-          address: debouncedAddress
-        })
-      })
-    })
+    const query = new URLSearchParams({
+      module: 'account',
+      action: 'tokentx',
+      address: debouncedAddress,
+      sort: 'ASC',
+    });
+    fetch(`https://api.bscscan.com/api?${query.toString()}`)
       .then((res) => res.json())
       .then((res) => {
         setLoading(false);
+        if (res.message === 'NOTOK') {
+          setErrors(res.result);
+          return;
+        }
+
         if (res.errors) {
           window.gtag('event', 'data-lookup-error');
           setErrors(res.errors);
@@ -135,20 +100,21 @@ export function Reflections() {
         const totals = {};
         const incomeCurrencies = [];
 
-        const sentTotals = res.data.ethereum.transfers.reduce(
+        const sentTotals = res.result.reduce(
           (acc, transfer) => {
-            const sender = sendersWeCareAbout[transfer.sender.address];
+            const sender = sendersWeCareAbout[transfer.from];
             if (!sender) return acc;
-            const date = transfer.date.date;
-            const currency = transfer.currency.symbol;
+            const date = new Date((transfer.timeStamp-0)*1e3).toISOString().split('T')[0];
+            const currency = transfer.tokenSymbol;
+            const amount = (transfer.value - 0) / (('1' + new Array(transfer.tokenDecimal - 0).fill('0').join('')) - 0);
             acc[date] = acc[date] || {};
             acc[date][currency] = acc[date][currency] || {};
             acc[date][currency][sender] = acc[date][currency][sender] || 0;
-            acc[date][currency][sender] += transfer.amount;
+            acc[date][currency][sender] += amount;
             if (!incomeCurrencies.includes(currency))
               incomeCurrencies.push(currency);
             totals[currency] = totals[currency] || {};
-            totals[currency][sender] = (totals[currency][sender] || 0) + transfer.amount;
+            totals[currency][sender] = (totals[currency][sender] || 0) + amount;
             return acc;
           },
           {}
@@ -193,7 +159,7 @@ export function Reflections() {
 
         setResult(chartData);
       });
-  }, [debouncedAddress]);
+  }, [debouncedAddress, retry]);
 
   return (
     <>
@@ -206,16 +172,23 @@ export function Reflections() {
       <div style={{ maxWidth: 600, margin: 'auto', padding: 20 }}>
         {debouncedAddress === "" ? (
           <>
-            <p>This tool will fetch data about reflective tokens ({uniqueSenders.join(', ')}), and display how much you're eaching from and in each token in a single place.</p>
-            <p>When you enter in your address, your browser makes a graphql query directly to https://graphql.bitquery.io/ to fetch all of your transactions, which are then processed into very pretty graphs for your viewing pleasure. Data may or may not be up-to-date - that entirely depends on bitquery.</p>
-            <p>There's a good chance this tool might break sometime. It's just been hacked together in a few hours so far, and is not using any API key for Bitquery, so they could block this if we end up sending too many requests.</p>
+            <p>This tool will fetch data about reflective tokens ({uniqueSenders.join(', ')}), and display how much you're earning from and in each token in a single place.</p>
+            <p>When you enter in your address, your browser makes a graphql query directly to https://api.bscscan.com/ to fetch all of your transactions, which are then processed client-side in your browser into simple graphs.</p>
+            <p>There's a good chance this tool might break sometime. It's just been hacked together in a few hours so far, and is not using any API key, so currently limited to 1 request every 5 seconds.</p>
             <p>Feel free to log any issues <a href="https://github.com/joelcox22/reflection.tools/issues" target="_blank" rel="noreferrer">in Github Issues</a>. <a href="https://github.com/joelcox22/reflection.tools" target="_blank" rel="noreferrer">Full source code is available there too</a>.</p>
             <p>Google analytics is setup purely so I can see how many people use this and if it's worth continuing development. Cookies are disabled - it's only interaction events with the page being logged.</p>
             <p>Pull requests are welcome if anyone wants to help out or add more tokens.</p>
             <p>I'd love to find a way to also fetch and display pending rewards from all of these tokens - if anyone knows how, please let me know via a Github Issue or something.</p>
           </>
         ) : errors ? (
-          <pre>{JSON.stringify(errors, null, 4)}</pre>
+          <>
+            <pre>{JSON.stringify(errors, null, 4)}</pre>
+            {typeof errors === 'string' && errors.includes('rate limit') && (
+              <button onClick={() => {
+                setRetry(retry + 1);
+              }}>Click here to try again</button>
+            )}
+          </>
         ) : loading ? (
           <p>Loading...</p>
         ) : (
