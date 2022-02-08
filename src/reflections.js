@@ -15,6 +15,7 @@ const sendersWeCareAbout = {
   "0x9e90d5e53baa6254be7db9cdb4afb4c60f9aacf7": "Y-5 Finance", // BUSD
   "0xa383829c57a1b7ccbf7c6cf00c4dea06a8c2e814": "Rematic EGC", // EGC
   "0x0b4a50a097848eea10e8848459ec1539645e5175": "Boda V2", // BUSD
+  "0x284c54b37f2ac667d84f0aa5d5bdfc8d3687304a": "Reflex Finance", // BUSD
 };
 
 const uniqueSenders = Object.values(sendersWeCareAbout).filter(
